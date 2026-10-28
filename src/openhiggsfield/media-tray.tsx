@@ -11,6 +11,8 @@ import { ROLE_ACCEPT, ROLE_LABELS, ROLE_TAGS, rolesOf } from "./data";
 import { AudioIcon, CloseIcon, VideoIcon } from "./icons";
 import { kindOfFile, loadUploads, mergeUploads, rememberUpload, saveUploads, type UploadRecord } from "./uploads";
 
+const IMAGE_ROLES: MediaRole[] = ["start", "reference", "end"];
+
 function useMedia(model: ModelEntry) {
   const imageMedia = useImageMedia();
   const videoMedia = useVideoMedia();
@@ -80,8 +82,8 @@ export function useMediaTray(
   }
   const allFull = roles.length > 0 && roles.every((role) => counts[role]! >= (model.roles[role] ?? 0));
 
-  async function onFile(file: File | undefined) {
-    if (!file) return;
+  async function onFile(file: File | undefined): Promise<string | null> {
+    if (!file) return null;
     onError(null);
     setUploading(true);
     try {
@@ -98,6 +100,7 @@ export function useMediaTray(
           createdAt: Date.now(),
         }),
       );
+      return uploaded.url;
     } catch (caught) {
       onError(
         caught instanceof Error
@@ -107,7 +110,44 @@ export function useMediaTray(
     } finally {
       setUploading(false);
     }
+    return null;
   }
+
+  /* A screenshot pasted anywhere on the page becomes an input: it uploads like
+     a picked file and attaches to the first image slot with room. The ref keeps
+     the listener on the latest model and attachments without re-binding it. */
+  const pasteRef = useRef<(files: File[]) => void>(() => {});
+  useEffect(() => {
+    pasteRef.current = (files) => {
+    const slot = IMAGE_ROLES.find(
+      (role) => (model.roles[role] ?? 0) > (counts[role] ?? 0),
+    );
+    if (!slot) {
+      onError(
+        roles.some((role) => IMAGE_ROLES.includes(role))
+          ? "Image slots are full — remove one to paste another."
+          : "This model takes no image input.",
+      );
+      return;
+    }
+    const image = files[0];
+    void onFile(image).then((url) => {
+      if (url) media.add({ id: crypto.randomUUID(), url, role: slot });
+    });
+    };
+  });
+  useEffect(() => {
+    function onPaste(event: ClipboardEvent) {
+      const files = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+        file.type.startsWith("image/"),
+      );
+      if (files.length === 0) return;
+      event.preventDefault();
+      pasteRef.current(files);
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, []);
 
   /* accept is set on the element rather than through state: the picker opens in
      the same tick as the choice, before React could re-render it. */
