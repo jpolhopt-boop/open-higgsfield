@@ -158,8 +158,12 @@ export function useMediaTray(
     pasteRef.current = (files, whole = false) => {
       /* Hand each image the next free image slot, counting the ones this same
          batch has already claimed. Files past the last slot are left out. */
+      /* One image can be a first frame; several are references. A start frame
+         switches most models to image-to-video, where the references are
+         dropped, so a batch never takes start/end while references exist. */
+      const multi = files.length > 1 && (model.roles.reference ?? 0) > 0;
       const free: MediaRole[] = [];
-      for (const role of IMAGE_ROLES) {
+      for (const role of multi ? (["reference"] as MediaRole[]) : IMAGE_ROLES) {
         const room = (model.roles[role] ?? 0) - (counts[role] ?? 0);
         for (let i = 0; i < room; i++) free.push(role);
       }
