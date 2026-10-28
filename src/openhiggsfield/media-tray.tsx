@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import type { MediaItem, MediaRole, ModelEntry } from "@/generation/catalog";
 import { useImageMedia, useVideoMedia } from "@/generation/stores/media";
+import { MAX_PER_PHOTO, usePerPhoto } from "@/generation/stores/per-photo";
 import { uploadMedia } from "@/generation/upload";
 
 import { ROLE_ACCEPT, ROLE_LABELS, ROLE_TAGS, rolesOf } from "./data";
@@ -313,10 +314,19 @@ export function useMediaTray(
 /** Attached inputs, above the prompt — the frames read before the words do. */
 export function MediaStrip({ model }: { model: ModelEntry }) {
   const media = useMedia(model);
+  const perPhoto = usePerPhoto();
   const items = media.items.filter((item) => model.roles[item.role]);
   if (items.length === 0) return null;
+  const photos = items.filter((item) => item.role === "reference").length;
 
   return (
+    <>
+    {photos > 1 && (
+      <label className="ohf-perphoto">
+        <input type="checkbox" checked={perPhoto.on} onChange={(event) => perPhoto.setOn(event.target.checked)} />
+        One run per photo — {Math.min(photos, MAX_PER_PHOTO)} separate requests, each billed
+      </label>
+    )}
     <ul className="ohf-strip">
       {items.map((item) => (
         <li key={item.id} className="ohf-strip-item">
@@ -351,5 +361,6 @@ export function MediaStrip({ model }: { model: ModelEntry }) {
         </li>
       ))}
     </ul>
+    </>
   );
 }

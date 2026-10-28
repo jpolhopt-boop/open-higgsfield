@@ -10,6 +10,7 @@ import { assemblePlane } from "@/generation/plane";
 import type { GenerationStatus } from "@/generation/platform";
 import { POLL_DEADLINE_MS, stopWatching, watchRequest } from "@/generation/poll";
 import { useActive } from "@/generation/stores/active";
+import { MAX_PER_PHOTO, usePerPhoto } from "@/generation/stores/per-photo";
 import { useImagePrompt, useVideoPrompt } from "@/generation/stores/prompt";
 import { useSettings } from "@/generation/stores/settings";
 
@@ -353,9 +354,25 @@ export function OpenHiggsfieldApp({ fontClassName = "" }: { fontClassName?: stri
        submitted once per result. Either way the grid opens the same number of
        skeletons, and each request clears the ones it owns. */
     const native = countSetting(entry);
-    const expected = native
-      ? Math.max(1, Number(plane.settings[native.key]) || 1)
-      : useActive.getState().batch;
+
+    /* Per-photo mode turns the attached references into one request each, so
+       every photo gets its own result. It is billed per request, so the press
+       asks first and never sends more than MAX_PER_PHOTO. */
+    const refs = plane.media.reference ?? [];
+    const perPhoto = usePerPhoto.getState().on && refs.length > 1;
+    if (perPhoto) {
+      const count = Math.min(refs.length, MAX_PER_PHOTO);
+      const ok = window.confirm(
+        `${count} separate ${entry.label} requests, one per photo. Each is billed on its own. Send them?`,
+      );
+      if (!ok) return;
+    }
+    const planes = perPhoto
+      ? refs.slice(0, MAX_PER_PHOTO).map((photo) => ({ ...plane, media: { ...plane.media, reference: [photo] } }))
+      : [plane];
+    const perRequest = native ? Math.max(1, Number(plane.settings[native.key]) || 1) : 1;
+    const requests = perPhoto ? planes.length : native ? 1 : useActive.getState().batch;
+    const expected = requests * perRequest;
     const startedAt = Date.now();
     const seq = ++press.current;
     const pending: ActiveRun[] = Array.from({ length: expected }, (_, index) => ({
@@ -365,9 +382,10 @@ export function OpenHiggsfieldApp({ fontClassName = "" }: { fontClassName?: stri
       ratio,
       startedAt,
     }));
-    const slots = native
-      ? [{ skeletons: pending.map((slot) => slot.id) }]
-      : pending.map((slot) => ({ skeletons: [slot.id] }));
+    const slots = Array.from({ length: requests }, (_, index) => ({
+      plane: planes[perPhoto ? index : 0]!,
+      skeletons: pending.slice(index * perRequest, (index + 1) * perRequest).map((slot) => slot.id),
+    }));
     const draft: RunDraft = {
       surface: entry.surface,
       modelId: entry.id,
@@ -385,9 +403,9 @@ export function OpenHiggsfieldApp({ fontClassName = "" }: { fontClassName?: stri
     setRuns((prev) => [...pending, ...prev]);
     galleryRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 
-    const runOne = async (slot: { skeletons: string[] }) => {
+    const runOne = async (slot: { plane: typeof plane; skeletons: string[] }) => {
       try {
-        const queued = await submitGeneration(plane);
+        const queued = await submitGeneration(slot.plane);
         setHistory((prev) => {
           const next = [...runningRows(queued.requestId, slot.skeletons.length, draft), ...prev];
           void saveHistory(next);

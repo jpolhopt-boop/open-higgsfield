@@ -1298,6 +1298,15 @@
   padding: 14px 12px 0;
   list-style: none;
 }
+.ohf-perphoto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 0;
+  font-size: 12px;
+  color: var(--t2, inherit);
+  cursor: pointer;
+}
 .ohf-strip-item {
   position: relative;
   animation: ohf-pop 0.2s var(--ease);
