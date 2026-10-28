@@ -1,12 +1,50 @@
 import { getModel } from "./catalog";
 import type { GenerationPlane, PlatformPaths } from "./catalog/types";
+import {
+  mapAiInfluencer,
+  mapGenjutsu,
+  mapGrokImage,
+  mapGrokVideo,
+  mapIdeogram,
+  mapKling4,
+  mapKling4Edit,
+  mapLtx,
+  mapMarketing,
+  mapMinimaxH3,
+  mapQwenImage,
+  mapRecraft,
+  mapSoulImage,
+  mapWan,
+  mapZImage,
+} from "./map-verified";
 
 type Mapped = { path: string; body: Record<string, unknown> };
 type Mapper = (plane: GenerationPlane) => Mapped;
 
 const MAP: Record<string, Mapper> = {
   "soul-cinema": (plane) => mapSoul(plane, "higgsfield-ai/soul/cinema"),
-  "soul-2": (plane) => mapSoul(plane, "higgsfield-ai/soul/v2/standard"),
+  "soul-2": (plane) => mapSoulImage(plane, "higgsfield-ai/soul/v2", true),
+  "soul-standard": (plane) => mapSoulImage(plane, "higgsfield-ai/soul", false),
+  "kling-4": mapKling4,
+  "kling-4-edit": mapKling4Edit,
+  genjutsu: mapGenjutsu,
+  "ai-influencer": mapAiInfluencer,
+  "marketing-studio-alpha": (plane) => mapMarketing(plane, "marketing-studio/image", false),
+  "marketing-studio-flare": (plane) => mapMarketing(plane, "marketing-studio/image/flare", true),
+  "marketing-studio-sunburst": (plane) => mapMarketing(plane, "marketing-studio/image/sunburst", true),
+  "grok-imagine-2": mapGrokImage,
+  "ideogram-4": mapIdeogram,
+  "qwen-image-3": mapQwenImage,
+  "z-image-turbo": mapZImage,
+  "recraft-4.1": (plane) => mapRecraft(plane, "recraft/v4.1/text-to-image"),
+  "recraft-4.1-pro": (plane) => mapRecraft(plane, "recraft/v4.1/pro/text-to-image"),
+  "minimax-h3": mapMinimaxH3,
+  "wan-3": (plane) => mapWan(plane, "alibaba/wan-3.0", false),
+  "wan-3-prime": (plane) => mapWan(plane, "alibaba/wan-3.0-prime", false),
+  "wan-2.7": (plane) => mapWan(plane, "wan/v2.7", true),
+  "ltx-2.5-fast": (plane) => mapLtx(plane, "fast"),
+  "ltx-2.5-pro": (plane) => mapLtx(plane, "pro"),
+  "grok-imagine-video-1.5": mapGrokVideo,
   "kling-3-turbo": mapKlingTurbo,
   "kling-3-std": (plane) => mapKling3(plane, "kling-video/v3.0/std"),
   "kling-3-pro": (plane) => mapKling3(plane, "kling-video/v3.0/pro"),
@@ -25,7 +63,22 @@ export function toPlatform(plane: GenerationPlane): Mapped {
   const model = getModel(plane.model);
   const map = MAP[model.id] ?? (model.paths ? (next) => mapByPaths(next, model.paths!) : undefined);
   if (!map) throw new Error(`No platform map for ${plane.model}`);
-  return map(plane);
+  const mapped = map(plane);
+  assertMediaSubmitted(plane, mapped.body);
+  return mapped;
+}
+
+/** Every attached file must be in the request. A map that cannot carry one has
+    to say so, never send the request without it. */
+function assertMediaSubmitted(plane: GenerationPlane, body: Record<string, unknown>) {
+  const sent = JSON.stringify(body);
+  for (const items of Object.values(plane.media)) {
+    for (const item of items ?? []) {
+      if (!sent.includes(JSON.stringify(item.url).slice(1, -1))) {
+        throw new Error(`The ${item.role} file cannot be used by ${getModel(plane.model).label} in this mode. Remove it or pick another model.`);
+      }
+    }
+  }
 }
 
 function urls(plane: GenerationPlane, role: "start" | "end" | "reference" | "video" | "audio") {

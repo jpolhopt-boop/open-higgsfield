@@ -52,7 +52,7 @@ export function createPlatformClient(options: PlatformClientOptions) {
 
   async function send(method: "GET" | "POST", path: string, body?: Record<string, unknown>) {
     const url = `${baseUrl}${path}`;
-    console.info("[platform] request", { method, url, body: body ?? null });
+    console.info("[platform] request", { method, path });
     const response = await fetchImpl(url, {
       method,
       headers: {
@@ -63,12 +63,16 @@ export function createPlatformClient(options: PlatformClientOptions) {
     });
 
     const payload = await readJson(response);
-    console.info("[platform] response", { method, url, status: response.status, body: payload });
+    console.info("[platform] response", { method, path, status: response.status });
     if (!response.ok) throw new PlatformError(response.status, payload);
     return payload;
   }
 
   return {
+    async cancel(requestId: string): Promise<void> {
+      if (!requestId) throw new PlatformError(400, { detail: "Missing request id" });
+      await send("POST", `/requests/${encodeURIComponent(requestId)}/cancel`);
+    },
     async submit(model: string, input: Record<string, unknown>): Promise<QueuedGeneration> {
       if (!isModelId(model)) throw new PlatformError(400, { detail: "Invalid model" });
       return mapQueued(await send("POST", `/${model}`, input));

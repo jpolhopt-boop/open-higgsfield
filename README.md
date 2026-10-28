@@ -113,9 +113,21 @@ Open the studio, press **Add key**, and paste your platform key as `id:secret`.
 ### Environment
 
 ```bash
-HF_API_BASE_URL=                      # generation API origin, server only
-OPEN_HIGGSFIELD_READ_WRITE_TOKEN=     # Vercel Blob read-write token
+HF_CREDENTIALS=                       # key-id:key-secret, server only (.env.local)
+HF_API_BASE_URL=                      # optional, defaults to https://api.higgsfield.ai
+OPEN_HIGGSFIELD_READ_WRITE_TOKEN=     # optional Vercel Blob token; without it uploads use the platform's presigned upload
 ```
+
+A key entered in the studio (cookie) wins over `HF_CREDENTIALS`.
+
+### Verification and checks
+
+Each catalog entry is marked documented, tested or unverified in
+`src/generation/catalog/verification.ts`, which also lists the API models that
+are not selectable because their input schema is not published. `tsx
+scripts/check-catalog.ts` builds every model's request offline (no network, no
+cost). Media that a model cannot use in the chosen mode is refused with a
+reason rather than dropped.
 
 ### Commands
 

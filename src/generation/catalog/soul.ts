@@ -20,6 +20,7 @@ export const soul2: ModelEntry = {
   id: "soul-2",
   surface: "image",
   label: "Soul 2",
-  roles: {},
+  /* One reference switches the request to image-to-image. */
+  roles: { reference: 1 },
   settings: soulSettings,
 };

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { hasPlatformCredentials, submitGeneration } from "@/generation/actions";
+import { cancelGeneration, hasPlatformCredentials, submitGeneration } from "@/generation/actions";
 import { MissingCredentialsError } from "@/generation/credentials";
 import { MODELS, getModel } from "@/generation/catalog";
 import type { Surface } from "@/generation/catalog";
@@ -26,7 +26,15 @@ import {
   type GalleryView,
 } from "./data";
 import { Gallery } from "./gallery";
-import { loadHistory, mergeHistory, replaceRequest, saveHistory, stepRun, type RunRecord } from "./history";
+import {
+  loadHistory,
+  mergeHistory,
+  replaceRequest,
+  requestIdOf,
+  saveHistory,
+  stepRun,
+  type RunRecord,
+} from "./history";
 import { CloseIcon, UndoIcon } from "./icons";
 import { SelectionBar, type SaveProgress } from "./selection-bar";
 import { Topbar } from "./topbar";
@@ -429,6 +437,12 @@ export function OpenHiggsfieldApp({ fontClassName = "" }: { fontClassName?: stri
 
   const deleteRuns = useCallback((records: RunRecord[]) => {
     if (records.length === 0) return;
+    /* Deleting a run still waiting asks the platform to cancel it. The API only
+       cancels a request that has not started; otherwise it answers 400, which is
+       ignored, and the run finishes (and is billed) server-side. */
+    for (const record of records) {
+      if (record.status === "running") void cancelGeneration({ requestIds: [requestIdOf(record)] }).catch(() => {});
+    }
     const ids = new Set(records.map((record) => record.id));
     setHistory((prev) => prev.filter((entry) => !ids.has(entry.id)));
     setDeleted(records);
