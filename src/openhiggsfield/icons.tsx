@@ -149,6 +149,14 @@ export function PlusIcon({ size = 14 }: IconProps) {
   );
 }
 
+export function FolderIcon({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M2.4 4.6c0-.7.5-1.2 1.2-1.2h2.6l1.4 1.6h4.8c.7 0 1.2.5 1.2 1.2v5.2c0 .7-.5 1.2-1.2 1.2H3.6c-.7 0-1.2-.5-1.2-1.2z" />
+    </svg>
+  );
+}
+
 export function MinusIcon({ size = 14 }: IconProps) {
   return (
     <svg {...base(size)}>

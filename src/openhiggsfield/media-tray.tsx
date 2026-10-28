@@ -12,6 +12,38 @@ import { AudioIcon, CloseIcon, VideoIcon } from "./icons";
 import { kindOfFile, loadUploads, mergeUploads, rememberUpload, saveUploads, type UploadRecord } from "./uploads";
 
 const IMAGE_ROLES: MediaRole[] = ["start", "reference", "end"];
+/** Most images one folder puts on the shelf — each is a real upload. */
+const SHELF_LIMIT = 40;
+
+/** Every file under a dropped file or folder, depth first. */
+async function filesOf(entry: FileSystemEntry): Promise<File[]> {
+  if (entry.isFile) {
+    return new Promise((resolve) =>
+      (entry as FileSystemFileEntry).file(
+        (file) => resolve([file]),
+        () => resolve([]),
+      ),
+    );
+  }
+  const reader = (entry as FileSystemDirectoryEntry).createReader();
+  const children: FileSystemEntry[] = [];
+  /* readEntries hands back a page at a time; an empty page ends the folder. */
+  for (;;) {
+    const page = await new Promise<FileSystemEntry[]>((resolve) =>
+      reader.readEntries(resolve, () => resolve([])),
+    );
+    if (page.length === 0) break;
+    children.push(...page);
+  }
+  return (await Promise.all(children.map(filesOf))).flat();
+}
+
+/** Sorted by path so a folder of numbered frames keeps its order. */
+function imageFiles(list: FileList | null): File[] {
+  return Array.from(list ?? [])
+    .filter((file) => file.type.startsWith("image/"))
+    .sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name, undefined, { numeric: true }));
+}
 
 function useMedia(model: ModelEntry) {
   const imageMedia = useImageMedia();
@@ -34,6 +66,11 @@ export interface MediaTray {
   allFull: boolean;
   /** Hidden file input; render it once inside the composer. */
   input: ReactNode;
+  /** Hidden folder input, rendered beside `input`. */
+  folderInput: ReactNode;
+  /** Open the OS folder picker: every image inside is uploaded to the shelf and
+      as many as fit the model's slots are attached. */
+  beginFolder: () => void;
   /** Set the role the next file takes, then open the OS picker. */
   begin: (role: MediaRole) => void;
   /** Make the role's inputs exactly these URLs — the picker hands back the set
@@ -82,7 +119,7 @@ export function useMediaTray(
   }
   const allFull = roles.length > 0 && roles.every((role) => counts[role]! >= (model.roles[role] ?? 0));
 
-  async function onFile(file: File | undefined): Promise<string | null> {
+  async function onFile(file: File | undefined, stage = true): Promise<string | null> {
     if (!file) return null;
     onError(null);
     setUploading(true);
@@ -90,7 +127,7 @@ export function useMediaTray(
       const uploaded = await uploadMedia(file);
       /* The file outlives this run: it joins the shelf the picker offers, so a
          reference used once can be reached again without a second upload. */
-      setStaged(uploaded.url);
+      if (stage) setStaged(uploaded.url);
       setUploads((prev) =>
         rememberUpload(prev, {
           id: crypto.randomUUID(),
@@ -116,37 +153,85 @@ export function useMediaTray(
   /* A screenshot pasted anywhere on the page becomes an input: it uploads like
      a picked file and attaches to the first image slot with room. The ref keeps
      the listener on the latest model and attachments without re-binding it. */
-  const pasteRef = useRef<(files: File[]) => void>(() => {});
+  const pasteRef = useRef<(files: File[], whole?: boolean) => void>(() => {});
   useEffect(() => {
-    pasteRef.current = (files) => {
-    const slot = IMAGE_ROLES.find(
-      (role) => (model.roles[role] ?? 0) > (counts[role] ?? 0),
-    );
-    if (!slot) {
-      onError(
-        roles.some((role) => IMAGE_ROLES.includes(role))
-          ? "Image slots are full — remove one to paste another."
-          : "This model takes no image input.",
-      );
-      return;
-    }
-    const image = files[0];
-    void onFile(image).then((url) => {
-      if (url) media.add({ id: crypto.randomUUID(), url, role: slot });
-    });
+    pasteRef.current = (files, whole = false) => {
+      /* Hand each image the next free image slot, counting the ones this same
+         batch has already claimed. Files past the last slot are left out. */
+      const free: MediaRole[] = [];
+      for (const role of IMAGE_ROLES) {
+        const room = (model.roles[role] ?? 0) - (counts[role] ?? 0);
+        for (let i = 0; i < room; i++) free.push(role);
+      }
+      if (free.length === 0) {
+        onError(
+          roles.some((role) => IMAGE_ROLES.includes(role))
+            ? "Image slots are full — remove one to add another."
+            : "This model takes no image input.",
+        );
+        return;
+      }
+      /* A folder goes onto the shelf whole (up to SHELF_LIMIT); only what fits
+         the slots is attached, the rest waits in the picker. */
+      const take = whole ? Math.min(files.length, SHELF_LIMIT) : Math.min(files.length, free.length);
+      void (async () => {
+        for (const [index, file] of files.slice(0, take).entries()) {
+          const url = await onFile(file, false);
+          if (url && index < free.length) media.add({ id: crypto.randomUUID(), url, role: free[index]! });
+        }
+        if (whole && files.length > free.length) {
+          onError(
+            `${Math.min(files.length, free.length)} attached; ${take - free.length > 0 ? take - free.length : 0} more on your shelf — pick them from the + menu.`,
+          );
+        } else if (!whole && files.length > free.length) {
+          onError(`Only ${free.length} of ${files.length} images fit this model's slots.`);
+        }
+      })();
     };
   });
   useEffect(() => {
+    const imagesIn = (transfer: DataTransfer | null) =>
+      Array.from(transfer?.files ?? []).filter((file) => file.type.startsWith("image/"));
+    const carriesFiles = (transfer: DataTransfer | null) =>
+      Array.from(transfer?.types ?? []).includes("Files");
+
     function onPaste(event: ClipboardEvent) {
-      const files = Array.from(event.clipboardData?.files ?? []).filter((file) =>
-        file.type.startsWith("image/"),
-      );
+      const files = imagesIn(event.clipboardData);
       if (files.length === 0) return;
       event.preventDefault();
       pasteRef.current(files);
     }
+    /* Dropping anywhere on the page works; dragover must be cancelled or the
+       browser opens the file instead of firing drop. */
+    function onDragOver(event: DragEvent) {
+      if (carriesFiles(event.dataTransfer)) event.preventDefault();
+    }
+    function onDrop(event: DragEvent) {
+      const transfer = event.dataTransfer;
+      if (!carriesFiles(transfer)) return;
+      event.preventDefault();
+      /* Entries must be read synchronously; the walk below finishes later. */
+      const entries = Array.from(transfer?.items ?? [])
+        .map((item) => item.webkitGetAsEntry?.())
+        .filter((entry): entry is FileSystemEntry => !!entry);
+      if (entries.some((entry) => entry.isDirectory)) {
+        void Promise.all(entries.map(filesOf)).then((groups) => {
+          const files = groups.flat().filter((file) => file.type.startsWith("image/"));
+          if (files.length > 0) pasteRef.current(files, true);
+        });
+        return;
+      }
+      const files = imagesIn(transfer);
+      if (files.length > 0) pasteRef.current(files);
+    }
     document.addEventListener("paste", onPaste);
-    return () => document.removeEventListener("paste", onPaste);
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("drop", onDrop);
+    return () => {
+      document.removeEventListener("paste", onPaste);
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("drop", onDrop);
+    };
   }, []);
 
   /* accept is set on the element rather than through state: the picker opens in
@@ -188,7 +273,37 @@ export function useMediaTray(
     }
   }
 
-  return { roles, items: media.items, uploads, staged, uploading, allFull, input, begin, apply };
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const folderInput = (
+    <input
+      ref={folderInputRef}
+      type="file"
+      hidden
+      multiple
+      {...{ webkitdirectory: "" }}
+      onChange={(event) => {
+        const files = imageFiles(event.target.files);
+        event.target.value = "";
+        if (files.length === 0) onError("No images found in that folder.");
+        else pasteRef.current(files, true);
+      }}
+    />
+  );
+  const beginFolder = () => folderInputRef.current?.click();
+
+  return {
+    roles,
+    items: media.items,
+    uploads,
+    staged,
+    uploading,
+    allFull,
+    input,
+    folderInput,
+    begin,
+    beginFolder,
+    apply,
+  };
 }
 
 /** Attached inputs, above the prompt — the frames read before the words do. */

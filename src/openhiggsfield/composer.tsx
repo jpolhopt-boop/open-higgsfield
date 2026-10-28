@@ -13,7 +13,7 @@ import { swatchFor } from "./artwork";
 import { AssetPicker } from "./asset-picker";
 import { PROMPT_PLACEHOLDERS, countSetting } from "./data";
 import type { RunRecord } from "./history";
-import { ArrowUpIcon, CaretDownIcon, CloseIcon, MinusIcon, PlusIcon, WarningIcon } from "./icons";
+import { ArrowUpIcon, CaretDownIcon, CloseIcon, FolderIcon, MinusIcon, PlusIcon, WarningIcon } from "./icons";
 import { MediaStrip, useMediaTray } from "./media-tray";
 import { ModelIcon, modelIconSrc } from "./model-icon";
 import { ModelPicker } from "./model-picker";
@@ -284,6 +284,7 @@ export function Composer({
               {tray.roles.length > 0 && (
                 <>
                   {tray.input}
+                  {tray.folderInput}
                   <button
                     type="button"
                     className="ohf-attach ohf-tip ohf-tip--start"
@@ -299,6 +300,16 @@ export function Composer({
                     ) : (
                       <PlusIcon size={16} />
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    className="ohf-attach ohf-tip ohf-tip--start"
+                    data-tip="Add a folder of images"
+                    disabled={tray.allFull || tray.uploading}
+                    aria-label="Add a folder of images"
+                    onClick={tray.beginFolder}
+                  >
+                    <FolderIcon size={16} />
                   </button>
                 </>
               )}
