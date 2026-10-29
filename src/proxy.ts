@@ -2,30 +2,37 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { DEVICE_COOKIE, DEVICE_COOKIE_OPTIONS, resolveDeviceId } from "./generation/device";
+import { SESSION_COOKIE, safeEqual, sessionToken } from "./generation/gate";
 
-/* When APP_PASSWORD is set, every page, server action and API route asks for
-   it (HTTP Basic; the user name is ignored). The server holds the platform key
-   and every generation is billed to it, so a published copy must not be open to
-   whoever finds the URL. Unset, the gate is off — fine for localhost. */
-function authorized(request: NextRequest, password: string): boolean {
+/* When APP_PASSWORD is set, every page, server action and API route needs it.
+   The server holds the platform key and every generation is billed to it, so a
+   published copy must not be open to whoever finds the URL. Unset, the gate is
+   off — fine for localhost.
+
+   Two ways in: the /login page, which sets a 30-day cookie (the only one that
+   works from an iPhone home-screen app, which never shows a Basic prompt), and
+   HTTP Basic (any user name) for tools like curl. */
+async function authorized(request: NextRequest, password: string): Promise<boolean> {
+  const cookie = request.cookies.get(SESSION_COOKIE)?.value;
+  if (cookie && safeEqual(cookie, await sessionToken(password))) return true;
+
   const header = request.headers.get("authorization") ?? "";
   if (!header.startsWith("Basic ")) return false;
-  let given: string;
   try {
     const decoded = atob(header.slice(6));
-    given = decoded.slice(decoded.indexOf(":") + 1);
+    return safeEqual(decoded.slice(decoded.indexOf(":") + 1), password);
   } catch {
     return false;
   }
-  if (given.length !== password.length) return false;
-  let diff = 0;
-  for (let i = 0; i < given.length; i++) diff |= given.charCodeAt(i) ^ password.charCodeAt(i);
-  return diff === 0;
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const password = process.env.APP_PASSWORD;
-  if (password && !authorized(request, password)) {
+  const { pathname } = request.nextUrl;
+  const open = pathname === "/login" || pathname === "/api/login";
+  if (password && !open && !(await authorized(request, password))) {
+    const wantsPage = request.method === "GET" && (request.headers.get("accept") ?? "").includes("text/html");
+    if (wantsPage) return NextResponse.redirect(new URL("/login", request.url));
     return new NextResponse("Authentication required", {
       status: 401,
       headers: { "WWW-Authenticate": 'Basic realm="Studio", charset="UTF-8"' },
