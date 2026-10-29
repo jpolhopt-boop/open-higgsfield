@@ -1,3 +1,6 @@
+import { useSavedPrompts } from "@/generation/stores/saved-prompts";
+import type { SavedPrompt } from "@/generation/stores/saved-prompts";
+
 import { loadHistory, mergeHistory, saveHistory } from "./history";
 import type { RunRecord } from "./history";
 import { loadUploads, mergeUploads, saveUploads } from "./uploads";
@@ -14,6 +17,8 @@ interface Backup {
   exportedAt: number;
   history: RunRecord[];
   uploads: UploadRecord[];
+  /** Absent in backups made before saved prompts existed. */
+  prompts?: SavedPrompt[];
 }
 
 export async function downloadBackup(): Promise<{ runs: number; uploads: number }> {
@@ -24,6 +29,7 @@ export async function downloadBackup(): Promise<{ runs: number; uploads: number 
     exportedAt: Date.now(),
     history,
     uploads,
+    prompts: useSavedPrompts.getState().prompts,
   };
   const blob = new Blob([JSON.stringify(backup)], { type: "application/json" });
   const link = document.createElement("a");
@@ -57,5 +63,6 @@ export async function importBackup(file: File): Promise<{ runs: number; uploads:
   const mergedUploads = mergeUploads(uploads, parsed.uploads as UploadRecord[]);
   await saveHistory(mergedHistory);
   await saveUploads(mergedUploads);
+  if (Array.isArray(parsed.prompts)) useSavedPrompts.getState().merge(parsed.prompts);
   return { runs: mergedHistory.length, uploads: mergedUploads.length };
 }

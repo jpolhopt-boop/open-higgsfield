@@ -13,7 +13,8 @@ import { swatchFor } from "./artwork";
 import { AssetPicker } from "./asset-picker";
 import { PROMPT_PLACEHOLDERS, countSetting } from "./data";
 import type { RunRecord } from "./history";
-import { ArrowUpIcon, CaretDownIcon, CloseIcon, FolderIcon, MinusIcon, PlusIcon, WarningIcon } from "./icons";
+import { ArrowUpIcon, BookmarkIcon, CaretDownIcon, CloseIcon, FolderIcon, MinusIcon, PlusIcon, WarningIcon } from "./icons";
+import { PromptLibrary } from "./prompt-library";
 import { MediaStrip, useMediaTray } from "./media-tray";
 import { ModelIcon, modelIconSrc } from "./model-icon";
 import { ModelPicker } from "./model-picker";
@@ -25,6 +26,7 @@ import { SettingPill, SettingPopover } from "./settings";
 const PICKER = "picker";
 const ASSETS = "assets";
 const SETTING = "setting:";
+const PROMPTS = "prompts";
 
 const PROMPT_MAX_HEIGHT = 168;
 
@@ -38,6 +40,7 @@ const POPOVER_GAP = 8;
 /** Declared widths keep an opening popover inside the composer's own column. */
 function popoverWidth(id: string, model: ModelEntry): number {
   if (id === PICKER || id === ASSETS) return 560;
+  if (id === PROMPTS) return 400;
   /* A list of an enum's values is the narrow panel; a slider needs its travel. */
   if (id.startsWith(SETTING) && model.settings[id.slice(SETTING.length)]?.type === "enum") {
     return 216;
@@ -259,6 +262,17 @@ export function Composer({
             onClose={() => setOverlay(null)}
           />
         )}
+        {overlay === PROMPTS && (
+          <PromptLibrary
+            surface={surface}
+            text={prompt.text}
+            onUse={(text) => {
+              prompt.setText(text);
+              promptRef.current?.focus();
+            }}
+            onClose={() => setOverlay(null)}
+          />
+        )}
         {overlay === PICKER && (
           <ModelPicker
             selectedId={model.id}
@@ -313,6 +327,17 @@ export function Composer({
                   </button>
                 </>
               )}
+              <button
+                type="button"
+                className="ohf-attach ohf-tip ohf-tip--start"
+                data-tip="Saved prompts"
+                aria-label="Saved prompts"
+                aria-expanded={overlay === PROMPTS}
+                aria-haspopup="dialog"
+                onClick={(event) => toggle(PROMPTS, event.currentTarget)}
+              >
+                <BookmarkIcon size={16} />
+              </button>
 
               {/* The prompt lives inside the wrap the outside-pointer rule
                   guards, so it has to dismiss for itself: reaching for the words

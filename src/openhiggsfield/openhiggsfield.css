@@ -2107,6 +2107,97 @@
   animation: ohf-pop 0.22s var(--ease);
   transform-origin: bottom left;
 }
+/* Saved prompts: a name field, a search, and the rows. */
+.ohf-prompts {
+  width: min(400px, 100%);
+  max-height: min(60vh, 460px);
+  overflow-y: auto;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.ohf-prompts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ohf-prompts-save {
+  display: flex;
+  gap: 8px;
+}
+.ohf-prompts-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: var(--s1);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.ohf-prompts-btn {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--t1, #e8e8ea);
+  color: var(--s1, #0b0b0c);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ohf-prompts-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ohf-prompts-hint,
+.ohf-prompts-empty {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.6;
+}
+.ohf-prompts-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.ohf-prompts-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.ohf-prompts-use {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ohf-prompts-use:hover {
+  background: var(--s1);
+}
+.ohf-prompts-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ohf-prompts-text {
+  font-size: 12px;
+  opacity: 0.65;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
 /* One setting at a time, so the panel is the width of its own values. */
 .ohf-popover--setting {
   width: min(268px, 100%);

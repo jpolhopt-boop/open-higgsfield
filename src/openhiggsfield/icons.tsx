@@ -149,6 +149,14 @@ export function PlusIcon({ size = 14 }: IconProps) {
   );
 }
 
+export function BookmarkIcon({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M4.4 2.8h7.2v10.4L8 10.6l-3.6 2.6z" />
+    </svg>
+  );
+}
+
 export function FolderIcon({ size = 14 }: IconProps) {
   return (
     <svg {...base(size)}>
