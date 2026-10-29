@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { VIEWS, VIEW_LABELS, type GalleryView } from "./data";
-import { AssetsIcon, HeartIcon, ImageIcon, KeyIcon, VideoIcon } from "./icons";
+import { downloadBackup, importBackup } from "./backup";
+import { AssetsIcon, DownloadIcon, HeartIcon, ImageIcon, KeyIcon, UploadIcon, VideoIcon } from "./icons";
 
 const VIEW_ICONS: Record<GalleryView, () => React.ReactNode> = {
   image: () => <ImageIcon />,
@@ -26,6 +27,7 @@ export function Topbar({
   onKeys: () => void;
 }) {
   const tabsRef = useRef<HTMLDivElement>(null);
+  const importRef = useRef<HTMLInputElement>(null);
   const [thumb, setThumb] = useState<{ x: number; w: number } | null>(null);
 
   /* The indicator is measured rather than derived from equal columns, so it
@@ -124,6 +126,45 @@ export function Topbar({
           whether one is held and opens the modal that sets it — and its lamp is
           the studio's liveness, the one place accent moves. */}
       <div className="ohf-bar ohf-enter-1">
+        <button
+          type="button"
+          className="ohf-key"
+          onClick={() => {
+            void downloadBackup()
+              .then(({ runs, uploads }) => window.alert(`Exported ${runs} runs and ${uploads} uploads.`))
+              .catch(() => window.alert("Could not export the history."));
+          }}
+          aria-label="Export history"
+          title="Export history to a file"
+        >
+          <DownloadIcon />
+        </button>
+        <input
+          ref={importRef}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            void importBackup(file)
+              .then(({ runs, uploads }) => {
+                window.alert(`Imported. Your history now has ${runs} runs and ${uploads} uploads.`);
+                window.location.reload();
+              })
+              .catch((caught) => window.alert(caught instanceof Error ? caught.message : "Import failed."));
+          }}
+        />
+        <button
+          type="button"
+          className="ohf-key"
+          onClick={() => importRef.current?.click()}
+          aria-label="Import history"
+          title="Import history from a file"
+        >
+          <UploadIcon />
+        </button>
         <button
           type="button"
           className="ohf-key"
