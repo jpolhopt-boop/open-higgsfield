@@ -2,11 +2,15 @@ import { useDownloadFormat } from "@/generation/stores/download-format";
 
 import { cutOut } from "./cutout";
 import type { RunRecord } from "./history";
+import { ensureFolderAccess, saveToFolder } from "./save-folder";
 
-let failure: "cdn" | "cutout" = "cdn";
+let failure: "cdn" | "cutout" | "folder" = "cdn";
 
 /** Why the last saveFile returned false, in words for the error strip. */
 export function saveFailureNote(): string {
+  if (failure === "folder") {
+    return "Could not write to the chosen save folder (access refused or the folder is gone). Choose the folder again in the save-location button at the top, or switch back to Downloads.";
+  }
   return failure === "cutout"
     ? "The background could not be removed (the cut-out tool or its model did not load). Check the connection and retry, or turn off PNG transparent."
     : "The platform’s CDN refused the read, so this run could not be saved. Open it to save it from the browser instead.";
@@ -18,6 +22,10 @@ export function saveFailureNote(): string {
    policy decides whether a run can be saved at all. A refusal is reported
    rather than papered over with a new tab the popup blocker would eat. */
 export async function saveFile(url: string, name: string): Promise<boolean> {
+  failure = "folder";
+  /* First, while the click is fresh: a chosen folder needs its write access
+     confirmed again after a reload. Refused means stop, not "download elsewhere". */
+  if (!(await ensureFolderAccess())) return false;
   failure = "cdn";
   try {
     const response = await fetch(url, { mode: "cors" });
@@ -31,6 +39,9 @@ export async function saveFile(url: string, name: string): Promise<boolean> {
       blob = await cutOut(blob);
       name = name.replace(/\.\w+$/, "") + ".png";
     }
+    failure = "folder";
+    const inFolder = await saveToFolder(blob, name);
+    if (inFolder !== null) return inFolder;
     const href = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = href;

@@ -2132,6 +2132,32 @@
   animation: ohf-pop 0.22s var(--ease);
   transform-origin: bottom left;
 }
+/* Save location: a button in the top bar that drops a small panel down. */
+.ohf-saveloc {
+  position: relative;
+}
+.ohf-saveloc .ohf-key-text {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ohf-saveloc .ohf-saveloc-pop {
+  top: calc(100% + 8px);
+  bottom: auto;
+  left: auto;
+  right: 0;
+  width: min(300px, 86vw);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  transform-origin: top right;
+}
+.ohf-saveloc-now {
+  margin: 0;
+  font-size: 13px;
+  word-break: break-word;
+}
 /* Saved prompts: a name field, a search, and the rows. */
 .ohf-prompts {
   width: min(400px, 100%);

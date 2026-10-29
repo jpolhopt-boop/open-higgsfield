@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { VIEWS, VIEW_LABELS, type GalleryView } from "./data";
 import { downloadBackup, importBackup } from "./backup";
+import { SaveLocation } from "./save-location";
 import { AssetsIcon, DownloadIcon, HeartIcon, ImageIcon, KeyIcon, UploadIcon, VideoIcon } from "./icons";
 
 const VIEW_ICONS: Record<GalleryView, () => React.ReactNode> = {
@@ -126,6 +127,7 @@ export function Topbar({
           whether one is held and opens the modal that sets it — and its lamp is
           the studio's liveness, the one place accent moves. */}
       <div className="ohf-bar ohf-enter-1">
+        <SaveLocation />
         <button
           type="button"
           className="ohf-key"
