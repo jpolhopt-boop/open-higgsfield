@@ -142,7 +142,7 @@ export function useMediaTray(
     } catch (caught) {
       onError(
         caught instanceof Error
-          ? `Upload failed — ${caught.message}. Check the Blob store is configured, then retry.`
+          ? `Upload failed — ${caught.message}. Retry, or use a smaller file.`
           : "Upload failed. Retry, or drop the file and generate from the prompt alone.",
       );
     } finally {
