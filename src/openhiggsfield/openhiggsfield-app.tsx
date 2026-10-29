@@ -11,6 +11,7 @@ import type { GenerationStatus } from "@/generation/platform";
 import { POLL_DEADLINE_MS, stopWatching, watchRequest } from "@/generation/poll";
 import { useActive } from "@/generation/stores/active";
 import { MAX_PER_PHOTO, usePerPhoto } from "@/generation/stores/per-photo";
+import { useSourceNames } from "@/generation/stores/source-names";
 import { useImagePrompt, useVideoPrompt } from "@/generation/stores/prompt";
 import { useSettings } from "@/generation/stores/settings";
 
@@ -63,6 +64,7 @@ type RunDraft = {
   meta: string;
   badge?: string;
   settings?: Record<string, unknown>;
+  sourceName?: string;
   createdAt: number;
 };
 
@@ -86,6 +88,7 @@ function draftOf(record: RunRecord): RunDraft {
     meta: record.meta,
     badge: record.badge,
     settings: record.settings,
+    sourceName: record.sourceName,
     createdAt: record.createdAt,
   };
 }
@@ -109,6 +112,7 @@ function runningRows(requestId: string, count: number, draft: RunDraft): RunReco
       art: artFor(draft.surface, hueOf(id), id),
       createdAt: draft.createdAt,
       settings: draft.settings,
+      sourceName: draft.sourceName,
     };
   });
 }
@@ -139,6 +143,7 @@ function terminalRows(requestId: string, draft: RunDraft, status: GenerationStat
       art: artFor(draft.surface, hueOf(id), id),
       createdAt: draft.createdAt,
       settings: draft.settings,
+      sourceName: draft.sourceName,
     };
   });
 }
@@ -405,14 +410,21 @@ export function OpenHiggsfieldApp({ fontClassName = "" }: { fontClassName?: stri
 
     const runOne = async (slot: { plane: typeof plane; skeletons: string[] }) => {
       try {
+        /* The result is saved under the name of the photo it was made from; in
+           per-photo mode each request has its own. */
+        const sourceUrl = (slot.plane.media.reference?.[0] ?? slot.plane.media.start?.[0])?.url;
+        const slotDraft: RunDraft = {
+          ...draft,
+          sourceName: sourceUrl ? useSourceNames.getState().byUrl[sourceUrl] : undefined,
+        };
         const queued = await submitGeneration(slot.plane);
         setHistory((prev) => {
-          const next = [...runningRows(queued.requestId, slot.skeletons.length, draft), ...prev];
+          const next = [...runningRows(queued.requestId, slot.skeletons.length, slotDraft), ...prev];
           void saveHistory(next);
           return next;
         });
         setRuns((prev) => prev.filter((active) => !slot.skeletons.includes(active.id)));
-        await resume(queued.requestId, draft, slot.skeletons.length);
+        await resume(queued.requestId, slotDraft, slot.skeletons.length);
       } catch (caught) {
         if (!alive.current) return;
         const message = describeError(caught);

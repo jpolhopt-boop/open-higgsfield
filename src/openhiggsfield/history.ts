@@ -28,6 +28,9 @@ export interface RunRecord {
   /** Resolved catalog settings this run was submitted with, so reuse can
       restore the dials and not just the words. Absent on pre-existing records. */
   settings?: Record<string, unknown>;
+  /** File name of the photo this run was made from, when it had one; the saved
+      file is named after it. Absent on runs made before this was kept. */
+  sourceName?: string;
 }
 
 export const HISTORY_KEY = "history.v1";

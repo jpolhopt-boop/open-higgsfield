@@ -50,6 +50,12 @@ export async function saveFile(url: string, name: string): Promise<boolean> {
 export function fileNameFor(record: RunRecord, index: number): string {
   const url = record.urls[0] ?? "";
   const ext = /\.([a-z0-9]{2,4})(?:[?#]|$)/i.exec(url)?.[1]?.toLowerCase();
+  /* A result made from a photo is named after it: "case.jpg" -> "case_(Generated)". */
+  const source = record.sourceName
+    ?.replace(/\.\w{2,5}$/, "")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .trim();
+  if (source) return `${source}_(Generated).${ext ?? (record.kind === "video" ? "mp4" : "png")}`;
   const slug =
     record.prompt
       .toLowerCase()

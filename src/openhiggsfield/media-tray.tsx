@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import type { MediaItem, MediaRole, ModelEntry } from "@/generation/catalog";
 import { useImageMedia, useVideoMedia } from "@/generation/stores/media";
 import { MAX_PER_PHOTO, usePerPhoto } from "@/generation/stores/per-photo";
+import { useSourceNames } from "@/generation/stores/source-names";
 import { uploadMedia } from "@/generation/upload";
 
 import { ROLE_ACCEPT, ROLE_LABELS, ROLE_TAGS, rolesOf } from "./data";
@@ -126,6 +127,7 @@ export function useMediaTray(
     setUploading(true);
     try {
       const uploaded = await uploadMedia(file);
+      useSourceNames.getState().remember(uploaded.url, file.name);
       /* The file outlives this run: it joins the shelf the picker offers, so a
          reference used once can be reached again without a second upload. */
       if (stage) setStaged(uploaded.url);
