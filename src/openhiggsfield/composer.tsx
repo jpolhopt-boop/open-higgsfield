@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { parseSettings } from "@/generation/catalog";
 import type { ModelEntry, Surface } from "@/generation/catalog";
 import { MAX_BATCH, useActive } from "@/generation/stores/active";
+import { useDownloadFormat } from "@/generation/stores/download-format";
 import { useImagePrompt, useVideoPrompt } from "@/generation/stores/prompt";
 import { useSettings } from "@/generation/stores/settings";
 
@@ -88,6 +89,8 @@ export function Composer({
   const settings = useSettings();
   const values = parseSettings(model, settings.byModel[model.id] ?? {});
   const tray = useMediaTray(model, onError);
+  const cutout = useDownloadFormat((state) => state.cutout);
+  const setCutout = useDownloadFormat((state) => state.setCutout);
 
   const [overlay, setOverlay] = useState<string | null>(null);
   const [anchor, setAnchor] = useState({ x: 0, y: 0 });
@@ -411,6 +414,22 @@ export function Composer({
                 ))}
 
                 <BatchStepper value={batchValue} counts={counts} onChange={setBatchValue} />
+
+                {surface === "image" && (
+                  <button
+                    type="button"
+                    className="ohf-ctl ohf-ctl--cutout ohf-tip"
+                    data-tip={
+                      cutout
+                        ? "Downloads: PNG with the background removed (done in your browser)"
+                        : "Downloads: the original file as generated"
+                    }
+                    aria-pressed={cutout}
+                    onClick={() => setCutout(!cutout)}
+                  >
+                    {cutout ? "PNG transparent" : "Original"}
+                  </button>
+                )}
               </div>
 
               <span className="ohf-generate-slot ohf-tip ohf-tip--end" data-tip={generateTip}>

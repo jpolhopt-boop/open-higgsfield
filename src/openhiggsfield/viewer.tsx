@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { settingLabel, settingValueLabel } from "./data";
-import { fileNameFor, saveFile } from "./download";
+import { fileNameFor, saveFailureNote, saveFile } from "./download";
 import { timeAgo, type RunRecord } from "./history";
 import { ModelIcon } from "./model-icon";
 import {
@@ -306,7 +306,7 @@ export function Viewer({
                 to a tab the browser can save from. */}
             {saveState === "failed" && (
               <p className="ohf-viewer-save-note" role="status">
-                The platform’s CDN refused the read. Open the file to save it from the browser.
+                {saveFailureNote()}
               </p>
             )}
             <div className="ohf-viewer-foot-row">

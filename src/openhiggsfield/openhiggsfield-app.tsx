@@ -16,7 +16,7 @@ import { useSettings } from "@/generation/stores/settings";
 
 import { GRAIN_URI, artFor } from "./artwork";
 import { Composer } from "./composer";
-import { fileNameFor, saveFile } from "./download";
+import { fileNameFor, saveFailureNote, saveFile } from "./download";
 import { KeyModal } from "./key-modal";
 import {
   CROSS_VIEWS,
@@ -587,9 +587,7 @@ export function OpenHiggsfieldApp({ fontClassName = "" }: { fontClassName?: stri
     if (!url) return;
     const ok = await saveFile(url, fileNameFor(record, 0));
     if (!ok) {
-      setError(
-        "The platform’s CDN refused the read, so this run could not be saved. Open it to save it from the browser instead.",
-      );
+      setError(saveFailureNote());
     }
   }, []);
 
@@ -610,8 +608,8 @@ export function OpenHiggsfieldApp({ fontClassName = "" }: { fontClassName?: stri
     if (refused > 0) {
       setError(
         refused === files.length
-          ? "The platform’s CDN refused the read, so nothing could be saved. Open a run to save it from the browser instead."
-          : `${refused} of ${files.length} files could not be saved — the platform’s CDN refused the read. Open those runs to save them from the browser.`,
+          ? saveFailureNote()
+          : `${refused} of ${files.length} files could not be saved. ${saveFailureNote()}`,
       );
     }
   }, [pickedRecords]);

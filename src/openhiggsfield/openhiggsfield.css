@@ -1307,6 +1307,11 @@
   color: var(--t2, inherit);
   cursor: pointer;
 }
+.ohf-ctl--cutout[aria-pressed="true"] {
+  background: var(--accent, #d7ff3f);
+  color: #11140a;
+  border-color: transparent;
+}
 .ohf-strip-head {
   display: flex;
   align-items: center;
