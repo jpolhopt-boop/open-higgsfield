@@ -13,7 +13,7 @@ import { swatchFor } from "./artwork";
 import { AssetPicker } from "./asset-picker";
 import { PROMPT_PLACEHOLDERS, countSetting } from "./data";
 import type { RunRecord } from "./history";
-import { ArrowUpIcon, BookmarkIcon, CaretDownIcon, CloseIcon, FolderIcon, MinusIcon, PlusIcon, WarningIcon } from "./icons";
+import { ArrowUpIcon, BookmarkIcon, CaretDownIcon, CloseIcon, FolderIcon, MinusIcon, PlusIcon, TrashIcon, WarningIcon } from "./icons";
 import { PromptLibrary } from "./prompt-library";
 import { MediaStrip, useMediaTray } from "./media-tray";
 import { ModelIcon, modelIconSrc } from "./model-icon";
@@ -338,6 +338,21 @@ export function Composer({
               >
                 <BookmarkIcon size={16} />
               </button>
+              {prompt.text.length > 0 && (
+                <button
+                  type="button"
+                  className="ohf-attach ohf-tip ohf-tip--start"
+                  data-tip="Clear prompt"
+                  aria-label="Clear prompt"
+                  onClick={() => {
+                    prompt.setText("");
+                    setOverlay(null);
+                    promptRef.current?.focus();
+                  }}
+                >
+                  <TrashIcon size={16} />
+                </button>
+              )}
 
               {/* The prompt lives inside the wrap the outside-pointer rule
                   guards, so it has to dismiss for itself: reaching for the words
