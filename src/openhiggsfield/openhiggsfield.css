@@ -1307,6 +1307,26 @@
   color: var(--t2, inherit);
   cursor: pointer;
 }
+.ohf-strip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ohf-strip-clear {
+  margin: 12px 14px 0 0;
+  padding: 3px 9px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t2, inherit);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ohf-strip-clear:hover {
+  color: inherit;
+  border-color: currentColor;
+}
 .ohf-strip-item {
   position: relative;
   animation: ohf-pop 0.2s var(--ease);

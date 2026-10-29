@@ -321,11 +321,20 @@ export function MediaStrip({ model }: { model: ModelEntry }) {
 
   return (
     <>
-    {photos > 1 && (
-      <label className="ohf-perphoto">
-        <input type="checkbox" checked={perPhoto.on} onChange={(event) => perPhoto.setOn(event.target.checked)} />
-        One run per photo — {Math.min(photos, MAX_PER_PHOTO)} separate requests, each billed
-      </label>
+    {items.length > 1 && (
+      <div className="ohf-strip-head">
+        {photos > 1 ? (
+          <label className="ohf-perphoto">
+            <input type="checkbox" checked={perPhoto.on} onChange={(event) => perPhoto.setOn(event.target.checked)} />
+            One run per photo — {Math.min(photos, MAX_PER_PHOTO)} separate requests, each billed
+          </label>
+        ) : (
+          <span />
+        )}
+        <button type="button" className="ohf-strip-clear" onClick={() => media.clear()}>
+          Clear all ({items.length})
+        </button>
+      </div>
     )}
     <ul className="ohf-strip">
       {items.map((item) => (
