@@ -11,6 +11,8 @@ import {
   twitterFor,
 } from "@/site";
 
+import { RegisterServiceWorker } from "./register-sw";
+
 import "./base.css";
 
 export const metadata: Metadata = {
@@ -50,7 +52,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <RegisterServiceWorker />
+      </body>
     </html>
   );
 }
